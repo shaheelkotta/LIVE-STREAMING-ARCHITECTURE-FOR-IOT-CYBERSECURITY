@@ -1,0 +1,4 @@
+apache-flink==1.20.0
+kafka-python==2.3.0
+pip==24.0
+setuptools==79.0.1
