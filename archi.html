@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Security Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #030810;
+    color: #e0f0ff;
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .grid-bg {
+    position: fixed; inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,200,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .scan-line {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0,200,255,0.6), transparent);
+    animation: scan 4s linear infinite;
+    pointer-events: none;
+    z-index: 100;
+  }
+  @keyframes scan { from { top: 0 } to { top: 100vh } }
+
+  header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    position: relative;
+  }
+
+  .title {
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #00d4ff;
+    text-shadow: 0 0 30px rgba(0,212,255,0.5);
+  }
+
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: #4a7a9b;
+    letter-spacing: 0.2em;
+    margin-top: 6px;
+  }
+
+  .arch-container {
+    max-width: 960px;
+    margin: 30px auto;
+    padding: 0 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  /* Vertical connector line */
+  .connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    position: relative;
+  }
+
+  .connector-line {
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--from-color), var(--to-color));
+    position: relative;
+  }
+
+  .connector-arrow {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 10px solid var(--to-color);
+  }
+
+  .connector-label {
+    position: absolute;
+    right: calc(50% + 14px);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    color: #4a7a9b;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    transform: translateY(-50%);
+    top: 50%;
+  }
+
+  /* Layer card */
+  .layer {
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 22px 28px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+    overflow: hidden;
+  }
+
+  .layer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--layer-glow);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .layer:hover::before { opacity: 1; }
+  .layer:hover { transform: translateX(4px); box-shadow: var(--hover-shadow); }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+
+  .layer-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    flex-shrink: 0;
+  }
+
+  .layer-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .layer-subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    opacity: 0.55;
+    letter-spacing: 0.08em;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .layer-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .info-block {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 3px;
+    padding: 10px 14px;
+  }
+
+  .info-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    opacity: 0.5;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .info-value {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  .info-block.full { grid-column: 1 / -1; }
+
+  .tag-list {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+  }
+
+  .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.08em;
+  }
+
+  /* Layer-specific colors */
+  .layer-1 {
+    --layer-color: #ff6b35;
+    border-color: rgba(255,107,53,0.35);
+    background: rgba(255,107,53,0.04);
+    --layer-glow: radial-gradient(ellipse at left, rgba(255,107,53,0.07), transparent 70%);
+    --hover-shadow: -4px 0 20px rgba(255,107,53,0.2), 0 0 30px rgba(255,107,53,0.08);
+  }
+  .layer-1 .layer-num { background: rgba(255,107,53,0.15); color: #ff6b35; border: 1px solid rgba(255,107,53,0.3); }
+  .layer-1 .layer-title { color: #ff8c5a; }
+  .layer-1 .tag { background: rgba(255,107,53,0.12); color: #ff8c5a; border: 1px solid rgba(255,107,53,0.2); }
+
+  .layer-2 {
+    --layer-color: #f5a623;
+    border-color: rgba(245,166,35,0.35);
+    background: rgba(245,166,35,0.04);
+    --layer-glow: radial-gradient(ellipse at left, rgba(245,166,35,0.07), transparent 70%);
+    --hover-shadow: -4px 0 20px rgba(245,166,35,0.2), 0 0 30px rgba(245,166,35,0.08);
+  }
+  .layer-2 .layer-num { background: rgba(245,166,35,0.15); color: #f5a623; border: 1px solid rgba(245,166,35,0.3); }
+  .layer-2 .layer-title { color: #f7b94a; }
+  .layer-2 .tag { background: rgba(245,166,35,0.12); color: #f7b94a; border: 1px solid rgba(245,166,35,0.2); }
+
+  .layer-3 {
+    --layer-color: #00d4ff;
+    border-color: rgba(0,212,255,0.4);
+    background: rgba(0,212,255,0.05);
+    --layer-glow: radial-gradient(ellipse at left, rgba(0,212,255,0.09), transparent 70%);
+    --hover-shadow: -4px 0 20px rgba(0,212,255,0.25), 0 0 30px rgba(0,212,255,0.1);
+  }
+  .layer-3 .layer-num { background: rgba(0,212,255,0.15); color: #00d4ff; border: 1px solid rgba(0,212,255,0.3); }
+  .layer-3 .layer-title { color: #33ddff; }
+  .layer-3 .tag { background: rgba(0,212,255,0.12); color: #33ddff; border: 1px solid rgba(0,212,255,0.2); }
+  .layer-3 { border-width: 1px; box-shadow: 0 0 40px rgba(0,212,255,0.08), inset 0 0 40px rgba(0,212,255,0.02); }
+
+  .layer-4 {
+    --layer-color: #7b61ff;
+    border-color: rgba(123,97,255,0.35);
+    background: rgba(123,97,255,0.04);
+    --layer-glow: radial-gradient(ellipse at left, rgba(123,97,255,0.07), transparent 70%);
+    --hover-shadow: -4px 0 20px rgba(123,97,255,0.2), 0 0 30px rgba(123,97,255,0.08);
+  }
+  .layer-4 .layer-num { background: rgba(123,97,255,0.15); color: #9b85ff; border: 1px solid rgba(123,97,255,0.3); }
+  .layer-4 .layer-title { color: #9b85ff; }
+  .layer-4 .tag { background: rgba(123,97,255,0.12); color: #9b85ff; border: 1px solid rgba(123,97,255,0.2); }
+
+  .layer-5 {
+    --layer-color: #2ecc71;
+    border-color: rgba(46,204,113,0.35);
+    background: rgba(46,204,113,0.04);
+    --layer-glow: radial-gradient(ellipse at left, rgba(46,204,113,0.07), transparent 70%);
+    --hover-shadow: -4px 0 20px rgba(46,204,113,0.2), 0 0 30px rgba(46,204,113,0.08);
+  }
+  .layer-5 .layer-num { background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.3); }
+  .layer-5 .layer-title { color: #4ed98b; }
+  .layer-5 .tag { background: rgba(46,204,113,0.12); color: #4ed98b; border: 1px solid rgba(46,204,113,0.2); }
+
+  .pulse-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--layer-color);
+    box-shadow: 0 0 8px var(--layer-color);
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .layer-accent-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--layer-color);
+    box-shadow: 0 0 12px var(--layer-color);
+  }
+
+  /* Stagger animation */
+  .layer { animation: slideIn 0.5s ease both; }
+  .layer-1 { animation-delay: 0.1s; }
+  .layer-2 { animation-delay: 0.2s; }
+  .layer-3 { animation-delay: 0.3s; }
+  .layer-4 { animation-delay: 0.4s; }
+  .layer-5 { animation-delay: 0.5s; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .status-bar {
+    text-align: center;
+    margin-top: 30px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: #2a4a6b;
+    letter-spacing: 0.2em;
+  }
+  .status-bar span { color: #1a6b4a; }
+
+  @media (max-width: 600px) {
+    .layer-body { grid-template-columns: 1fr; }
+    .layer-subtitle { display: none; }
+    .connector-label { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scan-line"></div>
+
+<header>
+  <div class="title">IoT Security — 5-Layer Stream Architecture</div>
+  <div class="subtitle">MASTER'S PROJECT · REAL-TIME THREAT DETECTION SYSTEM · DECOUPLED MICROSERVICE DESIGN</div>
+</header>
+
+<div class="arch-container">
+
+  <!-- Layer 1 -->
+  <div class="layer layer-1">
+    <div class="layer-accent-bar"></div>
+    <div class="layer-header">
+      <div class="pulse-dot" style="--layer-color:#ff6b35"></div>
+      <div class="layer-num">LAYER 01</div>
+      <div class="layer-title">Edge Network</div>
+      <div class="layer-subtitle">DATA GENERATION & ATTACKS</div>
+    </div>
+    <div class="layer-body">
+      <div class="info-block">
+        <div class="info-label">Component</div>
+        <div class="info-value">generator.py</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Runtime</div>
+        <div class="info-value">Python 3.11 · flink_env</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Simulated Devices</div>
+        <div class="info-value">15 IoT endpoints</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Device Types</div>
+        <div class="info-value">Temp · Cameras · Meters</div>
+      </div>
+      <div class="info-block full">
+        <div class="info-label">Injected Attack Payloads</div>
+        <div class="tag-list">
+          <span class="tag">Data Exfiltration</span>
+          <span class="tag">Replay Attack</span>
+          <span class="tag">DoS Attack</span>
+          <span class="tag">Probabilistic Injection</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector 1→2 -->
+  <div class="connector">
+    <div class="connector-line" style="--from-color:#ff6b35; --to-color:#f5a623">
+      <div class="connector-arrow" style="--to-color:#f5a623"></div>
+    </div>
+    <div class="connector-label">Raw event stream</div>
+  </div>
+
+  <!-- Layer 2 -->
+  <div class="layer layer-2">
+    <div class="layer-accent-bar"></div>
+    <div class="layer-header">
+      <div class="pulse-dot" style="--layer-color:#f5a623"></div>
+      <div class="layer-num">LAYER 02</div>
+      <div class="layer-title">Event Bus</div>
+      <div class="layer-subtitle">HIGH-SPEED INGESTION</div>
+    </div>
+    <div class="layer-body">
+      <div class="info-block">
+        <div class="info-label">Broker</div>
+        <div class="info-value">Apache Kafka</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Coordinator</div>
+        <div class="info-value">Zookeeper</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Endpoint</div>
+        <div class="info-value">localhost:9092</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Runtime</div>
+        <div class="info-value">Docker</div>
+      </div>
+      <div class="info-block full">
+        <div class="info-label">Partitioning Strategy</div>
+        <div class="tag-list">
+          <span class="tag">Key: device_id</span>
+          <span class="tag">Chronological ordering</span>
+          <span class="tag">Per-device lanes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector 2→3 -->
+  <div class="connector">
+    <div class="connector-line" style="--from-color:#f5a623; --to-color:#00d4ff">
+      <div class="connector-arrow" style="--to-color:#00d4ff"></div>
+    </div>
+    <div class="connector-label">Ordered partitions</div>
+  </div>
+
+  <!-- Layer 3 — SOC Brain (highlighted) -->
+  <div class="layer layer-3">
+    <div class="layer-accent-bar"></div>
+    <div class="layer-header">
+      <div class="pulse-dot" style="--layer-color:#00d4ff"></div>
+      <div class="layer-num">LAYER 03</div>
+      <div class="layer-title">SOC Brain</div>
+      <div class="layer-subtitle">STREAM PROCESSING & DETECTION · CORE</div>
+    </div>
+    <div class="layer-body">
+      <div class="info-block">
+        <div class="info-label">Engine</div>
+        <div class="info-value">Apache Flink</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Script</div>
+        <div class="info-value">flink_processor.py</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">State Storage</div>
+        <div class="info-value">RAM · Memory Boxes</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Web UI</div>
+        <div class="info-value">localhost:8081</div>
+      </div>
+      <div class="info-block full">
+        <div class="info-label">Detection Algorithms (Stateful)</div>
+        <div class="tag-list">
+          <span class="tag">Algorithm I</span>
+          <span class="tag">Algorithm II</span>
+          <span class="tag">Algorithm III</span>
+          <span class="tag">JSON Threat Alerts</span>
+          <span class="tag">Real-time Execution Graph</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector 3→4 -->
+  <div class="connector">
+    <div class="connector-line" style="--from-color:#00d4ff; --to-color:#7b61ff">
+      <div class="connector-arrow" style="--to-color:#7b61ff"></div>
+    </div>
+    <div class="connector-label">JSON threat alerts</div>
+  </div>
+
+  <!-- Layer 4 -->
+  <div class="layer layer-4">
+    <div class="layer-accent-bar"></div>
+    <div class="layer-header">
+      <div class="pulse-dot" style="--layer-color:#7b61ff"></div>
+      <div class="layer-num">LAYER 04</div>
+      <div class="layer-title">Permanent Storage</div>
+      <div class="layer-subtitle">FORENSIC ARCHIVING</div>
+    </div>
+    <div class="layer-body">
+      <div class="info-block">
+        <div class="info-label">Database</div>
+        <div class="info-value">TimescaleDB</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Endpoint</div>
+        <div class="info-value">localhost:5432</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Runtime</div>
+        <div class="info-value">Docker</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Base Engine</div>
+        <div class="info-value">PostgreSQL (time-series)</div>
+      </div>
+      <div class="info-block full">
+        <div class="info-label">Capabilities</div>
+        <div class="tag-list">
+          <span class="tag">High-speed ingest</span>
+          <span class="tag">Low overhead</span>
+          <span class="tag">Audit queries</span>
+          <span class="tag">JSON alert store</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connector 4→5 -->
+  <div class="connector">
+    <div class="connector-line" style="--from-color:#7b61ff; --to-color:#2ecc71">
+      <div class="connector-arrow" style="--to-color:#2ecc71"></div>
+    </div>
+    <div class="connector-label">Alert queries</div>
+  </div>
+
+  <!-- Layer 5 -->
+  <div class="layer layer-5">
+    <div class="layer-accent-bar"></div>
+    <div class="layer-header">
+      <div class="pulse-dot" style="--layer-color:#2ecc71"></div>
+      <div class="layer-num">LAYER 05</div>
+      <div class="layer-title">Visualization</div>
+      <div class="layer-subtitle">SOC DASHBOARD</div>
+    </div>
+    <div class="layer-body">
+      <div class="info-block">
+        <div class="info-label">Platform</div>
+        <div class="info-value">Grafana</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Data Source</div>
+        <div class="info-value">TimescaleDB</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Runtime</div>
+        <div class="info-value">Docker</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Audience</div>
+        <div class="info-value">Human SOC Analyst</div>
+      </div>
+      <div class="info-block full">
+        <div class="info-label">Panels & Views</div>
+        <div class="tag-list">
+          <span class="tag">Live Graphs</span>
+          <span class="tag">Heatmaps</span>
+          <span class="tag">Alarm Panels</span>
+          <span class="tag">Real-time Refresh</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    ARCHITECTURE STATUS: <span>● ALL LAYERS OPERATIONAL</span> &nbsp;·&nbsp; DECOUPLED · INDEPENDENTLY SCALABLE · REAL-TIME
+  </div>
+
+</div>
+</body>
+</html>
